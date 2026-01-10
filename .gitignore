@@ -215,6 +215,7 @@ mcts_numba_cuda-main/
 # Results
 results/
 plots/
+*.csv
 
 # Github
 .github/
