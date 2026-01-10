@@ -218,3 +218,15 @@ plots/
 
 # Github
 .github/
+
+# Local LaTeX build files
+*.aux
+*.bbl
+*.blg
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# MacOS
+.DS_Store
