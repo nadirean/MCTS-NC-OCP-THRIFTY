@@ -1,0 +1,234 @@
+\documentclass{beamer}
+
+% Ustawienia języka i kodowania
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+
+% Motyw prezentacji - profesjonalny i czytelny
+\usetheme{metropolis}
+
+% Dane tytułowe
+\title[Analiza MCTS-NC]{Analiza i eksperymenty nad zrównoleglonym algorytmem MCTS-NC}
+\author[W. Bartoszek, J. Kołdun]{Wojciech Bartoszek \and Jarosław Kołdun}
+\institute[Uczelnia]{Akademia Górniczo-Hutnicza w Krakowie \\ Wydział Informatyki}
+\date{}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% SLAJD TYTUŁOWY
+% -----------------------------------------------------------------------------
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% SEKCJA 1: CEL ROZWIĄZANIA
+% -----------------------------------------------------------------------------
+\section{Przeznaczenie i cel rozwiązania}
+
+\begin{frame}{1. Przeznaczenie rozwiązania (MCTS-NC)}
+    \textbf{Artykuł źródłowy:} \\
+    \textit{MCTS-NC: A thorough GPU parallelization of Monte Carlo Tree Search implemented in Python via numba.cuda} (P. Klęsk, SoftwareX 2025).
+
+    \vspace{0.5cm}
+
+    \textbf{Cel biblioteki:}
+    \begin{itemize}
+        \item Implementacja algorytmu Monte Carlo Tree Search (MCTS) w środowisku wysoce zrównoleglonym (GPU).
+        \item Umożliwienie szybkiego podejmowania decyzji w problemach o dużej przestrzeni stanów.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{1. Przeznaczenie rozwiązania (cd.)}
+    \textbf{Obszary zastosowań:}
+    \begin{itemize}
+        \item \textbf{Gry decyzyjne:} Szachy, Go, Connect4 (badane w projekcie).
+        \item \textbf{Bioinformatyka:} Modelowanie 3D chromatyny, zwijanie RNA.
+        \item \textbf{Logistyka i energetyka:} Optymalizacja przepływu ruchu, zarządzanie sieciami Smart Grid.
+    \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% SEKCJA 2: NARZĘDZIA
+% -----------------------------------------------------------------------------
+\section{Narzędzia i implementacja}
+
+\begin{frame}{2. Narzędzia użyte do realizacji równoległości}
+    Rozwiązanie opiera się na nowoczesnym stosie technologicznym Python, unikając konieczności pisania kodu w C++.
+
+    \begin{block}{Kluczowe technologie}
+        \begin{itemize}
+            \item \textbf{Python:} Język "gospodarza" (host code).
+            \item \textbf{CUDA (Compute Unified Device Architecture):} Platforma obliczeń równoległych na GPU firmy NVIDIA.
+            \item \textbf{Numba:} Kompilator JIT (Just-In-Time), który tłumaczy podzbiór kodu Pythona i NumPy bezpośrednio na kod maszynowy GPU (kernele CUDA).
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{2. Narzędzia (cd.) -- Dlaczego Numba?}
+    \textbf{Dlaczego Numba?}
+    \begin{itemize}
+        \item Pozwala na pisanie kerneli CUDA bezpośrednio w Pythonie.
+        \item Zapewnia wydajność zbliżoną do C/C++.
+        \item Łatwa integracja z ekosystemem Data Science (NumPy).
+    \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% SEKCJA 3: MODEL RÓWNOLEGŁY
+% -----------------------------------------------------------------------------
+\section{Model zrównoleglenia}
+
+\begin{frame}{3. Sposób zrównoleglenia algorytmu}
+    Algorytm MCTS składa się z 4 faz: \textit{Selection, Expansion, Simulation (Playout), Backup}. MCTS-NC zrównolegla \textbf{wszystkie} te etapy.
+
+    \textbf{Poziomy zrównoleglenia:}
+    \begin{enumerate}
+        \item \textbf{Leaf Parallelism:} Wiele wątków wykonuje symulacje z tego samego liścia.
+        \item \textbf{Root Parallelism:} Wiele niezależnych drzew budowanych równolegle.
+        \item \textbf{Tree Parallelism:} Wątki współpracują przy eksploracji jednego drzewa (unikając hazardów pamięciowych).
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{3. Sposób zrównoleglenia (cd.) -- Szczegóły techniczne}
+    \textbf{Szczegóły techniczne:}
+    \begin{itemize}
+        \item \textbf{Model pamięci:} Brak blokad (lock-free), wykorzystanie operacji atomowych tylko tam, gdzie to konieczne (lub unikanie ich przez redukcję).
+        \item \textbf{Komunikacja:} Minimalny narzut transferu Host $\leftrightarrow$ Device (transfery tylko na początku i końcu).
+        \item \textbf{Grid-stride loops:} Skalowalność niezależna od rozmiaru siatki wątków.
+    \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% SEKCJA 4: EKSPERYMENTY I WYNIKI
+% -----------------------------------------------------------------------------
+\section{Analiza wydajności i wyniki}
+
+\begin{frame}{4. Opis eksperymentów (Wariant OCP\_THRIFTY)}
+    Zgodnie z podziałem zadań, nasza grupa skupiła się na wariancie \textbf{OCP\_THRIFTY} (One-Child Policy, Memory Efficient).
+
+    \textbf{Konfiguracja testowa:}
+    \begin{itemize}
+        \item \textbf{Problem:} Gra Connect4 (4 w rzędzie).
+        \item \textbf{Środowisko:} NVIDIA GPU (zgodnie z dostępnością w laboratorium).
+        \item \textbf{Monitorowanie:} Nsight Systems / nvidia-smi.
+    \end{itemize}
+
+    \textbf{Badane parametry:}
+    \begin{itemize}
+        \item $N$ (liczba playoutów/symulacji) w zakresie od $32$ do $2048$.
+        \item Wpływ na jakość decyzji (wartość Q) oraz wydajność (playouts/sec).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Wyniki: Jakość decyzji (Best Q)}
+    Badanie rozkładu wartości Q dla najlepszego ruchu w zależności od liczby symulacji.
+
+    \begin{figure}
+        \centering
+        % Tutaj wstawiamy przesłany obrazek
+        \includegraphics[width=0.75\textwidth]{../plots/best_q_boxplot.png}
+        \caption{Rozkład wartości Q (wykres pudełkowy). Wyższe N zmniejsza wariancję.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Wyniki: Zbieżność wartości Q}
+    Zależność średniej wartości Q od liczby playoutów ($N$).
+
+    \vspace{0.5cm}
+    \textbf{Wnioski:}
+    \begin{itemize}
+        \item Wraz ze wzrostem $N$, wartość Q stabilizuje się.
+        \item Dla wariantu Thrifty, przy $N > 512$ zyski jakościowe maleją (prawo malejących przychodów), ale rośnie pewność decyzji.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Wyniki: Zbieżność wartości Q -- wykres}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.75\textwidth]{../plots/best_q_vs_n_playouts.png}
+        \caption{Średnie Best Q vs liczba playoutów.}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Wyniki: Wydajność obliczeniowa}
+    Przepustowość algorytmu (liczba symulacji na sekundę) w funkcji obciążenia ($N$).
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\textwidth]{../plots/playouts_per_second_vs_n_playouts.png}
+        \caption{Liczba playoutów na sekundę.}
+    \end{figure}
+    
+    \textbf{Obserwacja:} Wykres pokazuje nieliniowy wzrost. GPU potrzebuje odpowiednio dużego $N$, aby wysycić rdzenie CUDA i ukryć opóźnienia pamięci.
+\end{frame}
+
+\begin{frame}{Analiza obciążenia GPU (Monitoring)}
+    Analiza utylizacji GPU w czasie trwania eksperymentu.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{../plots/gpu_utilization_over_time.png}
+        \caption{Utylizacja GPU w czasie.}
+    \end{figure}
+
+    \begin{itemize}
+        \item Średnie obciążenie utrzymuje się na wysokim poziomie (~90\%).
+        \item Widoczne "szpilki" (spadki) odpowiadają momentom synchronizacji lub przesyłu danych między CPU a GPU.
+    \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% SEKCJA 5: PROPOZYCJA ULEPSZENIA
+% -----------------------------------------------------------------------------
+\section{Propozycja ulepszenia}
+
+\begin{frame}{Propozycja ulepszenia wydajności}
+    Na podstawie analizy wydajności i kodu źródłowego proponujemy optymalizację:
+    
+    \textbf{Weighted Depth Simulation (Ważona głębokość symulacji)}
+    
+    \begin{block}{Problem}
+        Obecnie symulacje (playouts) trwają do końca gry lub sztywnego limitu, marnując zasoby na oczywiste pozycje.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Propozycja ulepszenia -- Rozwiązanie}
+    \begin{block}{Rozwiązanie}
+        \begin{itemize}
+            \item Wprowadzenie tablicy wag dla głębokości przesyłanej do \textbf{pamięci stałej (constant memory)} GPU.
+            \item Skalowanie pętli symulacji wewnątrz kernela CUDA w oparciu o dynamikę gry.
+        \end{itemize}
+    \end{block}
+
+    \textbf{Oczekiwany efekt:} Głębsze przeszukiwanie w krytycznych momentach przy tym samym budżecie czasowym.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% PODSUMOWANIE
+% -----------------------------------------------------------------------------
+\begin{frame}{Podsumowanie (1/2)}
+    \begin{enumerate}
+        \item \textbf{MCTS-NC} to skuteczne narzędzie wykorzystujące Pythona i Numba do obliczeń GPGPU.
+        \item Zrównoleglenie na poziomie liści, korzenia i drzewa pozwala na pełne wykorzystanie architektury GPU.
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Podsumowanie (2/2)}
+    \begin{enumerate}
+        \setcounter{enumi}{2}
+        \item Eksperymenty dla wariantu \textbf{OCP\_THRIFTY} w Connect4 wykazały:
+        \begin{itemize}
+            \item Wysoką skalowalność przepustowości wraz ze wzrostem $N$.
+            \item Efektywne wykorzystanie GPU (niskie narzuty komunikacyjne).
+        \end{itemize}
+        \item Zaproponowano optymalizację zarządzania głębokością symulacji z użyciem pamięci stałej.
+    \end{enumerate}
+\end{frame}
+
+\end{document}
