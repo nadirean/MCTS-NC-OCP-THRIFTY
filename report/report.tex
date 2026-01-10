@@ -5,6 +5,8 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{literature.bib}
 \usepackage{geometry}
 \usepackage{float}
 \geometry{margin=1in}
@@ -17,7 +19,7 @@
 \maketitle
 
 \begin{abstract}
-Niniejszy raport stanowi sprawozdanie z analizy i testów oprogramowania MCTS-NC (Monte Carlo Tree Search - numba.cuda). Dokument opisuje cel rozwiązania, zastosowany model zrównoleglenia GPU oraz narzędzia implementacyjne. Przedstawiono również wyniki własnych eksperymentów dla wariantu \texttt{OCP\_THRIFTY} w grze Connect4, badając wpływ liczby drzew i playoutów na wydajność i jakość decyzji. Dodatkowo zaplanowano analizę wydajności przy pomocy systemu monitorującego; wyniki i propozycje ulepszeń zostaną umieszczone w sekcji "Analiza wydajności i monitoring".
+Niniejszy raport stanowi sprawozdanie z analizy i testów oprogramowania MCTS-NC (Monte Carlo Tree Search - numba.cuda). Dokument opisuje cel rozwiązania, zastosowany model zrównoleglenia GPU oraz narzędzia implementacyjne. Przedstawiono również wyniki własnych eksperymentów dla wariantu \texttt{OCP\_THRIFTY} w grze Connect4, badając wpływ liczby drzew i playoutów na wydajność i jakość decyzji. Dodatkowo przeprowadzono analizę wydajności przy pomocy systemu monitorującego.
 \end{abstract}
 
 \section{Przeznaczenie rozwiązania}
@@ -69,9 +71,9 @@ Do realizacji równoległości wykorzystano następujące technologie:
     \item \textbf{Sprzęt:} RTX 1650; CUDA 12.8.
 \end{itemize}
 W przeciwieństwie do rozwiązań opartych na MPI czy OpenMP działających na CPU, użycie \texttt{numba.cuda} pozwala na bezpośrednie pisanie jąder (kernels) CUDA w Pythonie.
-
+ 
 \section{Przebieg eksperymentów}
-Celem eksperymentów (demo) było ocenienie zachowania wariantu \texttt{OCP\_THRIFTY} dla gry Connect4 w różnych konfiguracjach: \texttt{n\_trees} = \{1,4,8,16\} i \texttt{n\_playouts} = \{32,64,128,256,512\}. Każda konfiguracja została wielokrotnie testowana (domyślnie 100 prób).
+Celem eksperymentów (demo) było ocenienie zachowania wariantu \texttt{OCP\_THRIFTY} dla gry Connect4 w różnych konfiguracjach: \texttt{n\_trees} = \{1,4,8,16\} i \texttt{n\_playouts} = \{32,64,128,256,512\}. Każda konfiguracja została wielokrotnie testowana (100 prób).
 
 \subsection{Metodologia eksperymentalna}
 \begin{itemize}
@@ -81,30 +83,30 @@ Celem eksperymentów (demo) było ocenienie zachowania wariantu \texttt{OCP\_THR
 \end{itemize}
 
 \subsection{Analiza wydajności i monitoring}
-W ramach projektu przeprowadzona zostanie analiza wydajności aplikacji przy użyciu systemu monitorującego. Poniżej przedstawiono plan, proponowane metryki oraz miejsce na wyniki (placeholdery), które zostaną wypełnione po wykonaniu eksperymentów z instrumentacją.
+W ramach projektu przeprowadzono analizę wydajności aplikacji przy użyciu systemu monitorującego. Poniżej przedstawiono plan, proponowane metryki oraz wyniki pomiarów z instrumentacji.
 
 \subsubsection{Cele i metryki}
 Analiza skupi się na następujących metrykach: wykorzystanie GPU (\%), wykorzystanie pamięci GPU, wykorzystanie CPU (\%), zużycie pamięci RAM procesu, liczba playoutów na sekundę (playouts/s), czasy etapów (select/expand/playout/backup), transfery host<->device oraz, o ile to możliwe, czasy poszczególnych kernelów.
 
-\subsubsection{System monitorujący — propozycje}
-Proponujemy następujące narzędzia i podejścia:
-\begin{itemize}
-  \item Lokalnie: NVIDIA Nsight Systems / Nsight Compute, NVTX dla oznaczania regionów, \texttt{pynvml} do odczytu metryk GPU.
-  \item Poziom Pythona: \texttt{psutil} (CPU/memory), \texttt{cProfile}/\texttt{line\_profiler} (profil CPU), logowanie metryk do CSV/Parquet.
-  \item Zdalne: Prometheus + PushGateway + Grafana (opcjonalnie) do długoterminowego gromadzenia i wizualizacji metryk.
-\end{itemize}
+\subsubsection{Plan eksperymentów i wyniki} 
+Po uruchomieniu eksperymentów z instrumentacją wygenerowano poniższą tabelę podsumowującą miary monitoringu oraz wykres wykorzystania GPU. \\
 
-\subsubsection{Plan eksperymentów i placeholdery wyników}
-Eksperymenty zostaną wykonane analogicznie do pętli eksperymentalnej w tym notebooku, lecz z włączonym monitoringiem. Wyniki monitoringu (tabele, wykresy czasowe, porównania) zostaną umieszczone poniżej po zakończeniu pomiarów.
+\begin{tabular}{lrr}
+\toprule
+metric & mean & std / max \\
+\midrule
+CPU (\% ) & 18.8 & 6.5\\
+GPU util (\% ) & 51.9 & 4.9\\
+GPU mem mean (MB) & 1846.6 & max 2339.4\\
+RSS mem mean (MB) & 438.2 & \\
+\bottomrule
+\end{tabular} \\
 
-% PLACEHOLDER: wyniki monitoringu (wykresy / tabele)
-\begin{itemize}
-  \item (Miejsce na wykresy i tabele) -- wyniki zostaną dodane po uruchomieniu eksperymentów z instrumentacją.
-\end{itemize}
+\noindent Wnioski: GPU było umiarkowanie obciążone podczas eksperymentów; rozważamy optymalizację parametrów bloków oraz redukcję transferów host $\leftrightarrow$ device w celu lepszego wykorzystania dostępnych zasobów GPU.
 
 \subsubsection{Proponowane ulepszenia — hipotezy do weryfikacji}
 \begin{itemize}
-  \item Zredukowanie transferów host<->device i minimalizacja kopiowania danych (oczekiwane zwiększenie przepustowości i zmniejszenie opóźnień).
+  \item Zredukowanie transferów host$\leftrightarrow$device i minimalizacja kopiowania danych (oczekiwane zwiększenie przepustowości i zmniejszenie opóźnień).
   \item Dopasowanie parametrów bloków/wątków (tpb) oraz rozkładu pracy w kernelach w celu lepszego wykorzystania SM GPU.
   \item Usprawnienie generatora losowości (np. pre-allocacja stanów RNG) i optymalizacja inicjalizacji per-thread, aby uniknąć kosztów w pętli programu.
   \item Profilowanie kernelów i rozważenie łączenia prostych kernelów (kernel fusion) lub przenoszenia części logiki na host w celu redukcji liczby wywołań kerneli.
@@ -112,7 +114,31 @@ Eksperymenty zostaną wykonane analogicznie do pętli eksperymentalnej w tym not
 
 \subsection{Zestawienie wyników}
 Poniżej wstawiono tabelę podsumowującą średnie wartości (\emph{mean} $\pm$ \emph{std}) dla szybkości playoutów i jakości akcji.\newline
-\input{tables/summary_table.tex}
+\begin{tabular}{rrrrr}
+\toprule
+n\_trees & n\_playouts & playouts/s (mean $\pm$ std) & best\_q (mean $\pm$ std) & trials \\
+\midrule
+1 & 64 & 52,265 $\pm$ 5,265 & 0.6416 $\pm$ 0.0302 & 100 \\
+1 & 128 & 100,643 $\pm$ 8,357 & 0.6356 $\pm$ 0.0257 & 100 \\
+1 & 256 & 185,010 $\pm$ 11,775 & 0.6337 $\pm$ 0.0229 & 100 \\
+1 & 512 & 350,306 $\pm$ 23,495 & 0.6399 $\pm$ 0.0176 & 100 \\
+4 & 32 & 101,651 $\pm$ 7,923 & 0.6407 $\pm$ 0.0219 & 100 \\
+4 & 64 & 212,774 $\pm$ 15,353 & 0.6389 $\pm$ 0.0187 & 100 \\
+4 & 128 & 432,024 $\pm$ 31,429 & 0.6402 $\pm$ 0.0126 & 100 \\
+4 & 256 & 819,187 $\pm$ 53,015 & 0.6405 $\pm$ 0.0122 & 100 \\
+4 & 512 & 1,346,204 $\pm$ 99,740 & 0.6398 $\pm$ 0.0079 & 100 \\
+8 & 32 & 215,212 $\pm$ 15,660 & 0.6379 $\pm$ 0.0195 & 100 \\
+8 & 64 & 398,186 $\pm$ 47,392 & 0.6393 $\pm$ 0.0132 & 100 \\
+8 & 128 & 778,756 $\pm$ 88,164 & 0.6396 $\pm$ 0.0098 & 100 \\
+8 & 256 & 1,495,930 $\pm$ 118,487 & 0.6411 $\pm$ 0.0083 & 100 \\
+8 & 512 & 2,296,589 $\pm$ 133,618 & 0.6407 $\pm$ 0.0059 & 100 \\
+16 & 32 & 423,327 $\pm$ 31,679 & 0.6387 $\pm$ 0.0131 & 100 \\
+16 & 64 & 777,088 $\pm$ 71,423 & 0.6396 $\pm$ 0.0092 & 100 \\
+16 & 128 & 1,620,980 $\pm$ 101,277 & 0.6398 $\pm$ 0.0066 & 100 \\
+16 & 256 & 2,842,605 $\pm$ 185,688 & 0.6416 $\pm$ 0.0060 & 100 \\
+16 & 512 & 3,712,266 $\pm$ 170,840 & 0.6409 $\pm$ 0.0037 & 100 \\
+\bottomrule
+\end{tabular}
 
 \subsection{Najważniejsze obserwacje}
 \begin{itemize}
@@ -163,7 +189,6 @@ Zgodnie z otwartymi pytaniami badawczymi postawionymi przez autora oprogramowani
 
 \renewcommand{\refname}{Literatura}
 \nocite{*}
-\bibliographystyle{plain}
-\bibliography{literature}
+\printbibliography
 
 \end{document}
