@@ -228,6 +228,9 @@ plots/
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+*.toc
+*.nav
+*.snm
 
 # MacOS
 .DS_Store
