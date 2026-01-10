@@ -1,0 +1,127 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\geometry{margin=1in}
+
+\title{Analiza i eksperymenty nad zrównoleglonym algorytmem MCTS-NC}
+\author{Wojciech Bartoszek \\ Jarosław Kołdun}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Niniejszy raport stanowi sprawozdanie z analizy i testów oprogramowania MCTS-NC (Monte Carlo Tree Search - numba.cuda). Dokument opisuje cel rozwiązania, zastosowany model zrównoleglenia GPU oraz narzędzia implementacyjne. Przedstawiono również wyniki własnych eksperymentów dla wariantu \texttt{OCP\_THRIFTY} w grze Connect4, badając wpływ liczby drzew i playoutów na wydajność i jakość decyzji.
+\end{abstract}
+
+\section{Przeznaczenie rozwiązania}
+Omawiane rozwiązanie, MCTS-NC, jest biblioteką służącą do realizacji algorytmu Monte Carlo Tree Search (MCTS) w środowisku wysoce zrównoleglonym. MCTS to algorytm uczenia ze wzmocnieniem (Reinforcement Learning), który buduje asymetryczne drzewo gry poprzez selektywne próbkowanie akcji i estymację ich wartości na podstawie losowych symulacji (playouts)~\cite{KLESK2025102139}.
+
+Główne obszary zastosowań tego rozwiązania to:
+\begin{itemize}
+    \item \textbf{Gry decyzyjne:} Szachy, Go, Connect4, Gomoku (weryfikowane w artykule źródłowym).
+    \item \textbf{Bioinformatyka:} np. modelowanie 3D chromatyny czy zwijanie RNA.
+    \item \textbf{Inżynieria ruchu i energetyka:} optymalizacja przepływu ruchu, zarządzanie siecią energetyczną.
+    \item \textbf{Matematyka:} odkrywanie algorytmów mnożenia macierzy.
+\end{itemize}
+Celem MCTS-NC jest dostarczenie szybkiej, działającej wyłącznie na GPU implementacji, która eliminuje wąskie gardła związane z przesyłaniem danych między CPU a GPU.
+
+\section{Opis zrównoleglenia algorytmu}
+Algorytm został zrównoleglony w oparciu o model obliczeniowy \textbf{CUDA (Compute Unified Device Architecture)} Implementacja łączy trzy poziomy zrównoleglenia (Leaf, Root, Tree parallelization) w jeden spójny system.
+
+\subsection{Model podziału i mapowanie wątków}
+Podział pracy pomiędzy wątki GPU zależy od etapu algorytmu i wybranego wariantu:
+\begin{itemize}
+    \item \textbf{Organizacja bloków:} Wątki są grupowane w bloki CUDA, które są indeksowane albo przez same indeksy drzew, albo przez pary (drzewo, akcja).
+    \item \textbf{Etapy MCTS:} Wszystkie cztery etapy algorytmu (selekcja, ekspansja, symulacja/playout, wsteczna propagacja/backup) wykorzystują wiele wątków GPU.
+    \item \textbf{Redukcje:} Do sumowania wyników oraz wyznaczania wartości maksymalnych (max/argmax) zastosowano wzorce redukcji (reduction patterns), co pozwala na obliczenia w czasie $O(1)$ lub $O(\log n)$.
+\end{itemize}
+
+\subsection{Zarządzanie pamięcią i komunikacja}
+Implementacja jest typu \textbf{lock-free} (bez blokad) – nie używa operacji atomowych ani muteksów, co jest kluczowe dla wydajności przy masowej równoległości.
+\begin{itemize}
+    \item \textbf{Współpraca wątków:} Wykorzystano mechanizm kooperacji wątków (threads cooperation) oraz szybką pamięć współdzieloną (shared memory) wewnątrz bloków.
+    \item \textbf{Transfer danych:} Zminimalizowano komunikację Host-Device. W wariancie \emph{Prodigal} transfery pamięci są niemal całkowicie wyeliminowane w głównej pętli.
+\end{itemize}
+
+\subsection{Warianty algorytmiczne}
+Zaimplementowano cztery warianty różniące się sposobem alokacji zasobów:
+\begin{itemize}
+    \item \textbf{OCP (One-Child Playouts) vs ACP (All-Children Playouts):} W OCP symulowany jest jeden losowy potomek liścia, w ACP – wszyscy potomkowie równolegle.
+    \item \textbf{Thrifty vs Prodigal:}
+        \begin{itemize}
+            \item \textbf{Thrifty (Oszczędny):} Liczba bloków jest dokładnie dopasowana do liczby legalnych akcji. Wymaga to jednak transferów pamięci do hosta w celu przeliczenia indeksów.
+            \item \textbf{Prodigal (Rozrzutny):} Alokuje nadmiarową siatkę bloków $(T, B)$. Marnuje pewne zasoby GPU, ale unika kosztownych transferów pamięci Host-Device.
+        \end{itemize}
+\end{itemize}
+
+\section{Narzędzia realizacyjne}
+Do realizacji równoległości wykorzystano następujące technologie:
+\begin{itemize}
+    \item \textbf{Język:} Python (wersja $\ge 3.13$).
+    \item \textbf{Biblioteka równoległości:} \textbf{Numba} (moduł \texttt{numba.cuda}). Jest to kompilator JIT (Just-In-Time), który tłumaczy kod Pythona na instrukcje PTX wykonywalne na kartach graficznych NVIDIA.
+    \item \textbf{Sprzęt:} RTX 1650; CUDA 12.8.
+\end{itemize}
+W przeciwieństwie do rozwiązań opartych na MPI czy OpenMP działających na CPU, użycie \texttt{numba.cuda} pozwala na bezpośrednie pisanie jąder (kernels) CUDA w Pythonie.
+
+\section{Przebieg eksperymentów}
+Celem eksperymentów (demo) było ocenienie zachowania wariantu \texttt{OCP\_THRIFTY} dla gry Connect4 w różnych konfiguracjach: \texttt{n\_trees} = \{1,4,8,16\} i \texttt{n\_playouts} = \{32,64,128,256,512\}. Każda konfiguracja została wielokrotnie testowana (domyślnie 100 prób).
+
+\subsection{Metodologia eksperymentalna}
+\begin{itemize}
+  \item Wariant algorytmu: \texttt{OCP\_THRIFTY}
+  \item Gra: Connect 4
+  \item Miary: \texttt{playouts\_per\_second}, \texttt{best\_q} (średnia wygranych dla wybranej akcji).
+\end{itemize}
+
+\subsection{Zestawienie wyników}
+Poniżej wstawiono tabelę podsumowującą średnie wartości (\emph{mean} $\pm$ \emph{std}) dla szybkości playoutów i jakości akcji.\newline
+\input{tables/summary_table_fixed.tex}
+
+\subsection{Najważniejsze obserwacje}
+\begin{itemize}
+  \item Najwyższą średnią liczbę playoutów na sekundę zaobserwowano dla konfiguracji \texttt{n\_trees=16, n\_playouts=512} (około 3.19e6 playouts/s).
+  \item Najwyższą średnią jakość decyzji (\texttt{best\_q}) uzyskano dla \texttt{n\_trees=1, n\_playouts=32} (średnia około 0.6496).
+  \item Ogólnie: szybkość playoutów rośnie wraz ze wzrostem \texttt{n\_trees} i/lub \texttt{n\_playouts}, natomiast średnia jakość (best\_q) jest względnie stabilna w mierzonych konfiguracjach.
+\end{itemize}
+
+\subsection{Wykresy}
+Poniżej zamieszczono kluczowe wykresy wygenerowane podczas eksperymentów.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../plots/playouts_per_second_vs_n_playouts.png}
+  \caption{Średnie playouts/sec w zależności od $n\_playouts$ dla różnych wartości $n\_trees$.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../plots/best_q_vs_n_playouts.png}
+  \caption{Średnie $best\_q$ w zależności od $n\_playouts$ dla różnych wartości $n\_trees$.}
+\end{figure}
+
+\section{Dyskusja i propozycja ulepszenia}
+Wyniki eksperymentów wskazują, że samo zwiększanie przepustowości (liczby playoutów na sekundę) nie przekłada się liniowo na jakość decyzji w wariancie OCP. W związku z tym, zamiast prostej zmiany wariantu na bardziej zasobożerny (ACP), proponujemy optymalizację algorytmiczną.
+
+\subsection{Propozycja: Dynamiczne skalowanie liczby playoutów}
+Zgodnie z otwartymi pytaniami badawczymi postawionymi przez autora oprogramowania, proponujemy implementację mechanizmu \textbf{zmiennej liczby playoutów w zależności od głębokości drzewa}.
+
+\begin{itemize}
+    \item \textbf{Problem:} Obecnie parametr $m$ (liczba playoutów) jest stały dla każdego węzła. Powoduje to, że zasoby GPU są zużywane równomiernie, nawet w sytuacjach, gdzie ruchy są oczywiste lub mało znaczące dla wyniku końcowego.
+    \item \textbf{Rozwiązanie:} Modyfikacja jądra \texttt{\_playout\_ocp} tak, aby parametr $m$ był funkcją głębokości węzła $d$, np. $m(d) = m_{base} \cdot f(d)$.
+    \item \textbf{Oczekiwany efekt:} Pozwoli to na "głębsze" przeszukiwanie w krytycznych momentach gry przy zachowaniu tego samego budżetu czasowego, co powinno podnieść wskaźnik wygranych bez konieczności drastycznego zwiększania pamięci (jak w wariancie Prodigal).
+    \item \textbf{Plan wdrożenia:} Wprowadzenie tablicy wag dla głębokości przesyłanej do pamięci stałej (constant memory) GPU i skalowanie pętli symulacji wewnątrz kernela CUDA.
+\end{itemize}
+
+\renewcommand{\refname}{Literatura}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{literature}
+
+\end{document}

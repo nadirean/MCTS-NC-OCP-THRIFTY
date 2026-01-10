@@ -1,0 +1,56 @@
+@article{KLESK2025102139,
+  title    = {MCTS-NC: A thorough GPU parallelization of Monte Carlo Tree Search implemented in Python via numba.cuda},
+  journal  = {SoftwareX},
+  volume   = {30},
+  pages    = {102139},
+  year     = {2025},
+  issn     = {2352-7110},
+  doi      = {https://doi.org/10.1016/j.softx.2025.102139},
+  url      = {https://www.sciencedirect.com/science/article/pii/S2352711025001062},
+  author   = {Przemysław Klęsk},
+  keywords = {MCTS parallelization, CUDA, Python, Numba, Bounds on action values estimates},
+  abstract = {With CUDA computational model in mind, we introduce MCTS-NC (Monte Carlo Tree Search–numba.cuda ). It contains four, fast-operating and thoroughly parallel, variants of the MCTS algorithm. The design of MCTS-NC combines three parallelization levels (leaf/root/tree parallelizations). Additionally, all algorithmic stages – selections, expansions, playouts, backups – employ multiple GPU threads. We apply suitable reduction patterns to carry out summations or max/argmax operations. The implementation uses very few device-host memory transfers, no atomic operations (is lock-free), and takes advantage of threads cooperation. In the mathematical part of this article, we demonstrate how the confidence bounds on estimated action values become tightened by both the number of independent concurrent playouts and the number of independent concurrent trees. The experimental part reports the performance of MCTS-NC on two game examples: Connect4 and Gomoku. All computational results can be exactly reproduced.}
+}
+
+@unknown{unknown,
+  author = {Klęsk, Przemysław},
+  year   = {2026},
+  month  = {01},
+  pages  = {},
+  title  = {Presentation on MCTS-NC: A thorough GPU parallelization of Monte Carlo Tree Search implemented in Python via numba.cuda}
+}
+
+@inproceedings{10.1145/2833157.2833162,
+  author    = {Lam, Siu Kwan and Pitrou, Antoine and Seibert, Stanley},
+  title     = {Numba: a LLVM-based Python JIT compiler},
+  year      = {2015},
+  isbn      = {9781450340052},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/2833157.2833162},
+  doi       = {10.1145/2833157.2833162},
+  abstract  = {Dynamic, interpreted languages, like Python, are attractive for domain-experts and scientists experimenting with new ideas. However, the performance of the interpreter is often a barrier when scaling to larger data sets. This paper presents a just-in-time compiler for Python that focuses in scientific and array-oriented computing. Starting with the simple syntax of Python, Numba compiles a subset of the language into efficient machine code that is comparable in performance to a traditional compiled language. In addition, we share our experience in building a JIT compiler using LLVM[1].},
+  booktitle = {Proceedings of the Second Workshop on the LLVM Compiler Infrastructure in HPC},
+  articleno = {7},
+  numpages  = {6},
+  keywords  = {LLVM, Python, compiler},
+  location  = {Austin, Texas},
+  series    = {LLVM '15}
+}
+
+@article{DBLP:journals/corr/abs-2103-04931,
+  author     = {Maciej Swiechowski and
+                Konrad Godlewski and
+                Bartosz Sawicki and
+                Jacek Mandziuk},
+  title      = {Monte Carlo Tree Search: {A} Review of Recent Modifications and Applications},
+  journal    = {CoRR},
+  volume     = {abs/2103.04931},
+  year       = {2021},
+  url        = {https://arxiv.org/abs/2103.04931},
+  eprinttype = {arXiv},
+  eprint     = {2103.04931},
+  timestamp  = {Thu, 14 Oct 2021 09:14:46 +0200},
+  biburl     = {https://dblp.org/rec/journals/corr/abs-2103-04931.bib},
+  bibsource  = {dblp computer science bibliography, https://dblp.org}
+}
