@@ -211,3 +211,10 @@ paper/
 
 # Original repo
 mcts_numba_cuda-main/
+
+# Results
+results/
+plots/
+
+# Github
+.github/
