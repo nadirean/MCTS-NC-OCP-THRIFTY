@@ -208,3 +208,6 @@ __marimo__/
 
 # The original paper
 paper/
+
+# Original repo
+mcts_numba_cuda-main/
