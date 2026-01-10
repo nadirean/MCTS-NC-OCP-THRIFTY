@@ -17,7 +17,7 @@
 \maketitle
 
 \begin{abstract}
-Niniejszy raport stanowi sprawozdanie z analizy i testów oprogramowania MCTS-NC (Monte Carlo Tree Search - numba.cuda). Dokument opisuje cel rozwiązania, zastosowany model zrównoleglenia GPU oraz narzędzia implementacyjne. Przedstawiono również wyniki własnych eksperymentów dla wariantu \texttt{OCP\_THRIFTY} w grze Connect4, badając wpływ liczby drzew i playoutów na wydajność i jakość decyzji.
+Niniejszy raport stanowi sprawozdanie z analizy i testów oprogramowania MCTS-NC (Monte Carlo Tree Search - numba.cuda). Dokument opisuje cel rozwiązania, zastosowany model zrównoleglenia GPU oraz narzędzia implementacyjne. Przedstawiono również wyniki własnych eksperymentów dla wariantu \texttt{OCP\_THRIFTY} w grze Connect4, badając wpływ liczby drzew i playoutów na wydajność i jakość decyzji. Dodatkowo zaplanowano analizę wydajności przy pomocy systemu monitorującego; wyniki i propozycje ulepszeń zostaną umieszczone w sekcji "Analiza wydajności i monitoring".
 \end{abstract}
 
 \section{Przeznaczenie rozwiązania}
@@ -80,13 +80,43 @@ Celem eksperymentów (demo) było ocenienie zachowania wariantu \texttt{OCP\_THR
   \item Miary: \texttt{playouts\_per\_second}, \texttt{best\_q} (średnia wygranych dla wybranej akcji).
 \end{itemize}
 
+\subsection{Analiza wydajności i monitoring}
+W ramach projektu przeprowadzona zostanie analiza wydajności aplikacji przy użyciu systemu monitorującego. Poniżej przedstawiono plan, proponowane metryki oraz miejsce na wyniki (placeholdery), które zostaną wypełnione po wykonaniu eksperymentów z instrumentacją.
+
+\subsubsection{Cele i metryki}
+Analiza skupi się na następujących metrykach: wykorzystanie GPU (\%), wykorzystanie pamięci GPU, wykorzystanie CPU (\%), zużycie pamięci RAM procesu, liczba playoutów na sekundę (playouts/s), czasy etapów (select/expand/playout/backup), transfery host<->device oraz, o ile to możliwe, czasy poszczególnych kernelów.
+
+\subsubsection{System monitorujący — propozycje}
+Proponujemy następujące narzędzia i podejścia:
+\begin{itemize}
+  \item Lokalnie: NVIDIA Nsight Systems / Nsight Compute, NVTX dla oznaczania regionów, \texttt{pynvml} do odczytu metryk GPU.
+  \item Poziom Pythona: \texttt{psutil} (CPU/memory), \texttt{cProfile}/\texttt{line\_profiler} (profil CPU), logowanie metryk do CSV/Parquet.
+  \item Zdalne: Prometheus + PushGateway + Grafana (opcjonalnie) do długoterminowego gromadzenia i wizualizacji metryk.
+\end{itemize}
+
+\subsubsection{Plan eksperymentów i placeholdery wyników}
+Eksperymenty zostaną wykonane analogicznie do pętli eksperymentalnej w tym notebooku, lecz z włączonym monitoringiem. Wyniki monitoringu (tabele, wykresy czasowe, porównania) zostaną umieszczone poniżej po zakończeniu pomiarów.
+
+% PLACEHOLDER: wyniki monitoringu (wykresy / tabele)
+\begin{itemize}
+  \item (Miejsce na wykresy i tabele) -- wyniki zostaną dodane po uruchomieniu eksperymentów z instrumentacją.
+\end{itemize}
+
+\subsubsection{Proponowane ulepszenia — hipotezy do weryfikacji}
+\begin{itemize}
+  \item Zredukowanie transferów host<->device i minimalizacja kopiowania danych (oczekiwane zwiększenie przepustowości i zmniejszenie opóźnień).
+  \item Dopasowanie parametrów bloków/wątków (tpb) oraz rozkładu pracy w kernelach w celu lepszego wykorzystania SM GPU.
+  \item Usprawnienie generatora losowości (np. pre-allocacja stanów RNG) i optymalizacja inicjalizacji per-thread, aby uniknąć kosztów w pętli programu.
+  \item Profilowanie kernelów i rozważenie łączenia prostych kernelów (kernel fusion) lub przenoszenia części logiki na host w celu redukcji liczby wywołań kerneli.
+\end{itemize}
+
 \subsection{Zestawienie wyników}
 Poniżej wstawiono tabelę podsumowującą średnie wartości (\emph{mean} $\pm$ \emph{std}) dla szybkości playoutów i jakości akcji.\newline
-\input{tables/summary_table_fixed.tex}
+\input{tables/summary_table.tex}
 
 \subsection{Najważniejsze obserwacje}
 \begin{itemize}
-  \item Najwyższą średnią liczbę playoutów na sekundę zaobserwowano dla konfiguracji \texttt{n\_trees=16, n\_playouts=512} (około 3.19e6 playouts/s).
+  \item Najwyższą średnią liczbę playoutów na sekundę zaobserwowano dla konfiguracji \texttt{n\_trees=16, n\_playouts=512}.
   \item Najwyższą średnią jakość decyzji (\texttt{best\_q}) uzyskano dla \texttt{n\_trees=1, n\_playouts=32} (średnia około 0.6496).
   \item Ogólnie: szybkość playoutów rośnie wraz ze wzrostem \texttt{n\_trees} i/lub \texttt{n\_playouts}, natomiast średnia jakość (best\_q) jest względnie stabilna w mierzonych konfiguracjach.
 \end{itemize}
@@ -104,6 +134,18 @@ Poniżej zamieszczono kluczowe wykresy wygenerowane podczas eksperymentów.
   \centering
   \includegraphics[width=0.9\linewidth]{../plots/best_q_vs_n_playouts.png}
   \caption{Średnie $best\_q$ w zależności od $n\_playouts$ dla różnych wartości $n\_trees$.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../plots/best_q_boxplot.png}
+  \caption{Boxploty rozkładu $best\_q$ dla różnych konfiguracji $n\_trees$ i $n\_playouts$.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../plots/gpu_utilization_over_time.png}
+  \caption{Wykres wykorzystania GPU w czasie podczas eksperymentu.}
 \end{figure}
 
 \section{Dyskusja i propozycja ulepszenia}
