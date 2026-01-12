@@ -221,10 +221,12 @@ results/
 # Local LaTeX build files
 *.aux
 *.bbl
+*.bcf
 *.blg
 *.out
 *.fdb_latexmk
 *.fls
+*.run.xml
 *.synctex.gz
 *.toc
 *.nav
