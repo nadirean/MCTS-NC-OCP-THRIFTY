@@ -85,7 +85,7 @@
 \section{Model zrównoleglenia}
 
 \begin{frame}{3. Sposób zrównoleglenia algorytmu}
-    Algorytm MCTS składa się z 4 faz: \textit{Selection, Expansion, Simulation (Playout), Backup}. MCTS-NC zrównolegla \textbf{wszystkie} te etapy.
+    Algorytm MCTS składa się z 4 faz: \textit{Selection, Expansion, Simulation (Playout), Backpropagation}. MCTS-NC zrównolegla \textbf{wszystkie} te etapy.
 
     \textbf{Poziomy zrównoleglenia:}
     \begin{enumerate}
@@ -115,8 +115,8 @@
     \textbf{Konfiguracja testowa:}
     \begin{itemize}
         \item \textbf{Problem:} Gra Connect4.
-        \item \textbf{Środowisko:} NVIDIA GPU (zgodnie z dostępnością w laboratorium).
-        \item \textbf{Monitorowanie:} Nsight Systems / nvidia-smi.
+        \item \textbf{Sprzęt:} GTX 1650 (4GB VRAM)
+        \item \textbf{Monitorowanie:} NVML przez pynvml.
     \end{itemize}
 
     \textbf{Badane parametry:}
@@ -124,6 +124,41 @@
         \item $N$ (liczba playoutów/symulacji) w zakresie od $32$ do $2048$.
         \item Wpływ na jakość decyzji (wartość Q) oraz wydajność (playouts/sec).
     \end{itemize}
+\end{frame}
+
+\begin{frame}{Wariant: OCP\_THRIFTY}
+    \textbf{OCP (One Child Playout)}
+    \begin{itemize}
+        \item Komputer wybiera jedno "dziecko" i wykonuje playout tylko dla niego.
+        \item Pozwala na masowe zrównoleglenie symulacji na GPU — wiele "płytkich" analiz zamiast jednej głębokiej.
+    \end{itemize}
+    \vspace{0.3cm}
+    \textbf{THRIFTY (Oszczędny)}
+    \begin{itemize}
+        \item Alokacja pamięci na bieżąco — nie rezerwuje dużych tabel w VRAM.
+        \item Mniej pamięci, więcej komunikacji CPU $\leftrightarrow$ GPU; stabilne działanie przy dużych drzewach bez OOM.
+    \end{itemize}
+    \vspace{0.3cm}
+    \textbf{Podsumowanie:} Wybraliśmy wariant \textbf{OCP\_THRIFTY} jako kompromis między zrównolegleniem a oszczędnością pamięci.
+\end{frame}
+
+\begin{frame}{Gra: Connect4}
+    \begin{columns}[T]
+        \begin{column}{0.45\textwidth}
+            \textbf{Zasady:}
+            \begin{itemize}
+                \item Plansza: 6 wierszy x 7 kolumn.
+                \item Cel: ułożyć cztery pionki w linii (poziomo, pionowo lub ukośnie).
+                \item Ruchy: na przemian, pionki spadają do najniższego wolnego pola w kolumnie.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth]{connect4.jpg}
+            \vspace{0.2cm}
+            \footnotesize{Przykładowa pozycja w Connect4.}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 \begin{frame}{Wyniki: Jakość decyzji (Best Q)}
