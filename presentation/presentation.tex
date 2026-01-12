@@ -64,7 +64,7 @@
     \begin{block}{Kluczowe technologie}
         \begin{itemize}
             \item \textbf{Python:} Język "gospodarza" (host code).
-            \item \textbf{CUDA (Compute Unified Device Architecture):} Platforma obliczeń równoległych na GPU firmy NVIDIA.
+            \item \textbf{CUDA:} Platforma obliczeń równoległych na GPU firmy NVIDIA.
             \item \textbf{Numba:} Kompilator JIT (Just-In-Time), który tłumaczy podzbiór kodu Pythona i NumPy bezpośrednio na kod maszynowy GPU (kernele CUDA).
         \end{itemize}
     \end{block}
@@ -114,7 +114,7 @@
 
     \textbf{Konfiguracja testowa:}
     \begin{itemize}
-        \item \textbf{Problem:} Gra Connect4 (4 w rzędzie).
+        \item \textbf{Problem:} Gra Connect4.
         \item \textbf{Środowisko:} NVIDIA GPU (zgodnie z dostępnością w laboratorium).
         \item \textbf{Monitorowanie:} Nsight Systems / nvidia-smi.
     \end{itemize}
@@ -131,9 +131,8 @@
 
     \begin{figure}
         \centering
-        % Tutaj wstawiamy przesłany obrazek
         \includegraphics[width=0.75\textwidth]{../plots/best_q_boxplot.png}
-        \caption{Rozkład wartości Q (wykres pudełkowy). Wyższe N zmniejsza wariancję.}
+        \caption{Rozkład wartości Q. Wyższe N zmniejsza wariancję.}
     \end{figure}
 \end{frame}
 
@@ -165,7 +164,7 @@
         \caption{Liczba playoutów na sekundę.}
     \end{figure}
     
-    \textbf{Obserwacja:} Wykres pokazuje nieliniowy wzrost. GPU potrzebuje odpowiednio dużego $N$, aby wysycić rdzenie CUDA i ukryć opóźnienia pamięci.
+    \textbf{Obserwacja:} Wykres pokazuje nieliniowy wzrost.
 \end{frame}
 
 \begin{frame}{Analiza obciążenia GPU (Monitoring)}
@@ -178,8 +177,8 @@
     \end{figure}
 
     \begin{itemize}
-        \item Średnie obciążenie utrzymuje się na wysokim poziomie (~90\%).
-        \item Widoczne "szpilki" (spadki) odpowiadają momentom synchronizacji lub przesyłu danych między CPU a GPU.
+        \item Średnie obciążenie utrzymuje się na średnim poziomie (~55\%).
+        \item Obciążenie GPU jest stabilne w czasie, nie ma widocznych drastycznych spadków/wzrostów.
     \end{itemize}
 \end{frame}
 
@@ -201,7 +200,7 @@
 \begin{frame}{Propozycja ulepszenia -- Rozwiązanie}
     \begin{block}{Rozwiązanie}
         \begin{itemize}
-            \item Wprowadzenie tablicy wag dla głębokości przesyłanej do \textbf{pamięci stałej (constant memory)} GPU.
+            \item Wprowadzenie tablicy wag dla głębokości przesyłanej do \textbf{pamięci stałej} GPU.
             \item Skalowanie pętli symulacji wewnątrz kernela CUDA w oparciu o dynamikę gry.
         \end{itemize}
     \end{block}
